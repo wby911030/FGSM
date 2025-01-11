@@ -11,16 +11,14 @@ class BaseModel(torch.nn.Module):
         self.loss_func = None
         self.metrics = None
         self.device = None
-        self.data_format = None
         
-    def compile(self, optimizer, loss_function, metrics = None, device = "cpu", data_format = "normal"):
+    def compile(self, optimizer, loss_function, metrics = None, device = "cpu"):
         self.opt = optimizer
         self.loss_func = loss_function
         self.metrics = metrics
         self.device = device
-        self.data_format = data_format
         
-    def _validate(self, data):
+    def _validate(self, val_data):
         total_samples = 0
         self.eval()
         running_loss = 0.0
@@ -28,8 +26,12 @@ class BaseModel(torch.nn.Module):
         info = dict()
 
         with torch.no_grad():
-            for batch, (x_data, y_data) in enumerate(data):
-                x_data, y_data = x_data.to(self.device), y_data.to(self.device)
+            for batch, data in enumerate(val_data):
+                if len(data) > 2:
+                    x_data, y_data = [x.to(self.device) for x in data[0:-1]], data[-1].to(self.device)
+                else:
+                    x_data, y_data = data[0].to(self.device), data[-1].to(self.device)
+                    
                 pred = self.forward(x_data)
                 loss = self.loss_func(pred, y_data)
 
@@ -64,16 +66,16 @@ class BaseModel(torch.nn.Module):
             num_samples = 0
             
             with tqdm(total=num_batches, desc=f'Epoch {epoch + 1}/{epochs}', unit='batch', leave=True) as pbar:
-                for batch, (x_data, y_data) in enumerate(training_data):    
-                    x_data, y_data = x_data.to(self.device), y_data.to(self.device)
+                for batch, data in enumerate(training_data):
+                    if len(data) > 2:
+                        x_data, y_data = [x.to(self.device) for x in data[0:-1]], data[-1].to(self.device)
+                    else:
+                        x_data, y_data = data[0].to(self.device), data[-1].to(self.device)
                     info = dict()
                     self.train()
                     
                     # Compute prediction error
-                    if self.data_format == "tuple":
-                        pred = self.forward((x_data, y_data))
-                    else:
-                        pred = self.forward(x_data)
+                    pred = self.forward(x_data) 
                     loss = self.loss_func(pred, y_data)
 
                     # Backpropagation
