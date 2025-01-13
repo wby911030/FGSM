@@ -1,2 +1,1 @@
-This is a demo for paper report. 
-Decompress the data and run the code
+This is a demo for paper report. <br>Decompress the data and run the code.
